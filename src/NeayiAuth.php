@@ -34,6 +34,9 @@ class NeayiAuth extends AuthProviderFramework
     }
 
     /**
+     * Inherited from PluggableAuth
+     * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
+     * 
      * @param $id
      * @param $username
      * @param $realname
@@ -147,6 +150,9 @@ class NeayiAuth extends AuthProviderFramework
     }
 
     /**
+     * Inherited from PluggableAuth
+     * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
+     * 
      * @param User $user
      * @return void
      * @throws FatalError
@@ -164,6 +170,9 @@ class NeayiAuth extends AuthProviderFramework
     }
 
     /**
+     * Inherited from PluggableAuth
+     * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
+     * 
      * Store the laravel ID in neayiauth_users so that we can match when necessary
      * 
      * @param $id
@@ -207,7 +216,10 @@ class NeayiAuth extends AuthProviderFramework
 
 
     /**
-     * Adds the user to the groups defined via $wgOAuthAutoPopulateGroups after authentication.
+     * Inherited from PluggableAuth
+     * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
+     * 
+     * Adds the user to the groups after authentication.
      *
      * @param User $user
      * @return bool
@@ -238,6 +250,9 @@ class NeayiAuth extends AuthProviderFramework
     }
 
     /**
+     * Inherited from PluggableAuth
+     * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
+     * 
      * Fired when MediaWiki is updated to allow NeayiAuth to register updates for the database schema.
      *
      * @param DatabaseUpdater $updater
