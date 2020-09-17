@@ -1,0 +1,27 @@
+{
+  "@metadata": {
+    "authors": [
+      "Marijn van Wezel <xxmarijnw>"
+    ]
+  },
+  "neayiauth-extensionname": "NeayiAuth",
+  "neayiauth-desc": "Extends the PluggableAuth extension to provide authentication using OAuth.",
+  "neayiauth-pluggable-auth-class-desc": "The class name that extends PluggableAuth; this configuration parameter is set by the extension and should not be edited by the user.",
+  "neayiauth-uri-desc": "The OAuth authentication URL.",
+  "neayiauth-client-id-desc": "The consumer key received from the OAuth application.",
+  "neayiauth-client-secret-desc": "The consumer secret received from the OAuth application.",
+  "neayiauth-redirect-uri-desc": "The default callback URL to which the OAuth application returns after a successful authentication request.",
+  "neayiauth-auth-providers-desc": "An array containing a list of custom OAuth providers together with their class name.",
+  "neayiauth-auth-provider-desc": "The OAuth provider that the extension will use.",
+  "neayiauth-auto-populate-groups-desc": "An array containing a list of MediaWiki group names that must be automatically assigned to the user after they are authenticated.",
+  "neayiauth-pluggable-auth-button-label-message-desc": "The name of the message that will be used for the label of the login button on the Special:UserLogin form.",
+  "neayiauth-pluggable-auth-button-label-message": "Log in with OAuth",
+  "neayiauth-authentication-failure": "Authentication failed (are you authorised for this wiki?).",
+  "neayiauth-invalid-username": "Username provided by the OAuth provider is not valid.",
+  "neayiauth-unknown-auth-provider-class-exception-message": "OAuth provider class not loaded or not found",
+  "neayiauth-unknown-auth-provider-exception-message": "Unknown OAuth provider ($1)",
+  "neayiauth-invalid-auth-provider-class-exception-message": "The OAuth provider class does not implement AuthProvider",
+  "neayiauth-initiate-login-failure": "Unable to initiate communication with OAuth provider.",
+  "neayiauth-migrate-users-by-username-desc": "Whether or not to allow usurpation of existing accounts by username.",
+  "neayiauth-user-already-exists-message": "The username \"$1\" is already taken."
+}

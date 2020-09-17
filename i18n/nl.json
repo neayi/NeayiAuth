@@ -1,0 +1,27 @@
+{
+  "@metadata": {
+    "authors": [
+      "Marijn van Wezel <xxmarijnw>"
+    ]
+  },
+  "neayiauth-extensionname": "NeayiAuth",
+  "neayiauth-desc": "Zorgt voor authenticatie met behulp van OAuth in combinatie met PluggableAuth.",
+  "neayiauth-pluggable-auth-class-desc": "De naam van de class die PluggableAuth extend; deze configuratie parameter wordt door de extensie ingesteld en zou niet door de gebruiker aan moeten worden gepast.",
+  "neayiauth-uri-desc": "De OAuth authenticatie URL.",
+  "neayiauth-client-id-desc": "De consumer sleutel ontvangen van de OAuth-provider.",
+  "neayiauth-client-secret-desc": "De consumer secret ontvangen van de OAuth-provider.",
+  "neayiauth-redirect-uri-desc": "De standaard terugkeer URL waarheen de OAuth-provider de gebruiker zal sturen nadat deze succesvol is geauthenticeerd.",
+  "neayiauth-auth-providers-desc": "Een lijst (array) met alle niet-standaard authenticatieleveranciers samen met de naam van hun class.",
+  "neayiauth-auth-provider-desc": "De authenticatieleverancier waarvan de extensie gebruik moet maken.",
+  "neayiauth-auto-populate-groups-desc": "Een lijst (array) met MediaWiki groepen die automatisch aan de gebruiker worden toegewezen nadat deze successvol is geauthenticeerd.",
+  "neayiauth-pluggable-auth-button-label-message-desc": "De naam van de system message dat gebruikt wordt als label op de login button op de Special:UserLogin pagina.",
+  "neayiauth-pluggable-auth-button-label-message": "Log in met OAuth",
+  "neayiauth-authentication-failure": "Authenticatie mislukt (bent u geauthoriseerd voor deze wiki?).",
+  "neayiauth-invalid-username": "Gebruikersnaam verstrekt door de OAuth-provider is niet geldig.",
+  "neayiauth-unknown-auth-provider-class-exception-message": "OAuth-provider class niet gevonden of geladen",
+  "neayiauth-unknown-auth-provider-exception-message": "Onbekende OAuth-provider ($1)",
+  "neayiauth-invalid-auth-provider-class-exception-message": "De OAuth-provider class is geen implementatie van AuthProvider",
+  "neayiauth-initiate-login-failure": "Kan communicatie met OAuth-provider niet starten.",
+  "neayiauth-migrate-users-by-username-desc": "Het al dan niet toestaan van toe-eigening van bestaande accounts gebaseerd op gebruikersnaam.",
+  "neayiauth-user-already-exists-message": "De gebruikersnaam \"$1\" is al bezet."
+}

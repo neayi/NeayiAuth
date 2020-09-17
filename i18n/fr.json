@@ -1,0 +1,28 @@
+{
+  "@metadata": {
+    "authors": [
+      "Bertrand Gorge <BertrandGorge>"
+    ]
+  },
+
+  "neayiauth-extensionname": "NeayiAuth",
+  "neayiauth-desc": "Étend l'extension PluggableAuth pour fournir une authentification à l'aide d'OAuth.",
+  "neayiauth-pluggable-auth-class-desc": "Le nom de la classe qui étend PluggableAuth; ce paramètre de configuration est défini par l'extension et ne doit pas être modifié par l'utilisateur.",
+  "neayiauth-uri-desc": "L'URL d'authentification OAuth.",
+  "neayiauth-client-id-desc": "La clé consommateur reçue de l'application OAuth.",
+  "neayiauth-client-secret-desc": "Le secret client reçu de l'application OAuth.",
+  "neayiauth-redirect-uri-desc": "L'URL de rappel par défaut à laquelle l'application OAuth retourne après une demande d'authentification réussie.",
+  "neayiauth-auth-providers-desc": "Un tableau contenant une liste de fournisseurs OAuth personnalisés avec leur nom de classe.",
+  "neayiauth-auth-provider-desc": "Le fournisseur OAuth que l'extension utilisera.",
+  "neayiauth-auto-populate-groups-desc": "Un tableau contenant une liste de noms de groupes MediaWiki qui doivent être automatiquement attribués à l'utilisateur une fois authentifié.",
+  "neayiauth-pluggable-auth-button-label-message-desc": "Le nom du message qui sera utilisé pour le libellé du bouton de connexion sur le formulaire Special: UserLogin.",
+  "neayiauth-pluggable-auth-button-label-message": "Connexion avec Neayi",
+  "neayiauth-authentication-failure": "L'authentification a échoué (êtes-vous autorisé pour ce wiki?).",
+  "neayiauth-invalid-username": "Le nom d'utilisateur fourni par le fournisseur OAuth n'est pas valide.",
+  "neayiauth-unknown-auth-provider-class-exception-message": "Classe du fournisseur OAuth non chargée ou introuvable",
+  "neayiauth-unknown-auth-provider-exception-message": "Fournisseur OAuth inconnu ($1)",
+  "neayiauth-invalid-auth-provider-class-exception-message": "La classe de fournisseur OAuth n'implémente pas AuthProvider",
+  "neayiauth-initiate-login-failure": "Impossible d'établir la communication avec le fournisseur OAuth.",
+  "neayiauth-migrate-users-by-username-desc": "Autoriser ou non l'usurpation de comptes existants par nom d'utilisateur.",
+  "neayiauth-user-already-exists-message": "Le nom d'utilisateur \"$1\" est déjà pris."
+}
