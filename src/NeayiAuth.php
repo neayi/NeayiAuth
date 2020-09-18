@@ -97,25 +97,38 @@ class NeayiAuth extends AuthProviderFramework
                 return false;
             }
 
-            // Todo : possible utf8 issue with ucfirst here:
-            $user_info['name'] = ucfirst($user_info['name']);
-
+            // make sure the UserName starts with an upercase : https://www.mediawiki.org/wiki/Topic:R97c76vpuokaqby9
+            $user_info['name'] = mb_convert_case($user_info['name'], MB_CASE_TITLE, 'UTF-8');
             if (!isset($user_info['name']) || !User::isValidUserName($user_info['name'])) {
                 $errorMessage = wfMessage('neayiauth-invalid-username')->plain();
                 return false;
             }
 
-            $username = $user_info['name']; // Required.
+            $username = $user_info['name'];
+
             $realname = isset($user_info['realname']) ? $user_info['realname'] : '';
             $email = isset($user_info['email']) ? $user_info['email'] : '';
-            $this->external_id = $user_info['id'];
+            $this->external_id = $user_info['id']; // Required too.
 
             $local_user_id = $this->getMediawikiUserIdForExternalId();
             $user = null;
             $id = null;
 
             if (!empty($local_user_id))
+            {
                 $user = User::newFromId($local_user_id);
+                if (!empty($user))
+                {
+                    // NB: there's no need to update the realname or email - this is taken care
+                    // by pluggable auth. See that $wgPluggableAuth_EnableLocalProperties is left at the default value (false)
+                    
+                    // It is not possible to simply change the UserName. 
+                    // See https://www.mediawiki.org/wiki/Extension:Renameuser to understand the
+                    // steps required for changing the username. In the time being we just make sure the 
+                    // $username is as stored in DB
+                    $username = $user->getName();
+                }
+            }
 
             if (empty($user))
             {
