@@ -56,26 +56,19 @@ class NeayiAuth extends AuthProviderFramework
             $key = $this->getSessionVariable("request_key");
             $this->removeSessionVariable("request_key");
 
-            // first find the session ID that was passed back by Laravel :
-            $authManager = AuthManager::singleton();
-            $request = $authManager->getRequest();
-            $sid = $request->getText('request_sid');
-
             // Dev note : at this point, we could save $sid in the session (setSessionVariable), so that 
             //            we can disconnect the userfrom Laravel in deauthenticate()
 
-            if (empty($key) || empty($sid))
-            {
+            if (empty($key)) {
                 $errorMessage = wfMessage('neayiauth-authentication-failure')->plain();
                 return false;                
             }
-
-            $api_url = 'https://questions.dev.tripleperformance.fr/api.php?' . http_build_query(array('token' => $key, 'sid' => $sid));
+            $wgOAuthUserApiByToken = $GLOBALS['wgOAuthUserApiByToken'];
+            $api_url = $wgOAuthUserApiByToken. http_build_query(['wiki_token' => $key]);
 
             // - dev only - With our self signed certificate, lets allow weaker certificates:
-            $arrContextOptions = array();
-            if (strpos($api_url, '.dev.') !== false)
-            {
+            $arrContextOptions = [];
+            if (strpos($api_url, '.dev.') !== false) {
                 $arrContextOptions = array(
                     "ssl" => array(
                         "allow_self_signed" => true,
@@ -87,6 +80,7 @@ class NeayiAuth extends AuthProviderFramework
             // - end dev only -
 
             $response = file_get_contents($api_url, false, stream_context_create($arrContextOptions));
+
             $user_info = json_decode($response, true);
 
             $hook = Hooks::run('NeayiAuthAfterGetUser', [&$user_info, &$errorMessage]);
@@ -111,14 +105,11 @@ class NeayiAuth extends AuthProviderFramework
             $this->external_id = $user_info['id']; // Required too.
 
             $local_user_id = $this->getMediawikiUserIdForExternalId();
-            $user = null;
-            $id = null;
+            $id = $user = null;
 
-            if (!empty($local_user_id))
-            {
+            if (!empty($local_user_id)) {
                 $user = User::newFromId($local_user_id);
-                if (!empty($user))
-                {
+                if (!empty($user)) {
                     // NB: there's no need to update the realname or email - this is taken care
                     // by pluggable auth. See that $wgPluggableAuth_EnableLocalProperties is left at the default value (false)
                     
@@ -130,16 +121,16 @@ class NeayiAuth extends AuthProviderFramework
                 }
             }
 
-            if (empty($user))
-            {
+            if (empty($user)) {
                 // Create the user or log in using the UserName
                 $user = User::newFromName($username);
             }
 
-            if (!empty($user))
+            if (!empty($user)) {
                 $id = $user->getId() === 0 ? null : $user->getId();
-            
-            if (!empty($id) && empty($local_user_id)) {
+            }
+
+            if (!empty($id) && $local_user_id === false) {
                 // Store $this->external_id
                 $this->saveExtraAttributes($id);
             }
@@ -155,9 +146,11 @@ class NeayiAuth extends AuthProviderFramework
         $this->setSessionVariable('request_key', $token);
         $this->saveSession();
 
-        $auth_url = 'https://questions.dev.tripleperformance.fr/login.php?'
-                    . http_build_query(array('redirectUri' => $GLOBALS['wgOAuthRedirectUri'],
-                                             'token' => $token));
+        $data = [
+            'wiki_callback' => $GLOBALS['wgOAuthRedirectUri'],
+            'wiki_token' => $token
+        ];
+        $auth_url = $GLOBALS['wgOAuthUri']. http_build_query($data);
         header("Location: $auth_url");
         exit;
     }
@@ -194,10 +187,12 @@ class NeayiAuth extends AuthProviderFramework
      * @internal
      */
     public function saveExtraAttributes($id)
-    {       
+    {
         $dbr = wfGetDB(DB_MASTER);
-        $dbr->insert('neayiauth_users', ['neayiauth_user' => $id,
-                                         'neayiauth_external_userid' => $this->external_id]);
+        $dbr->insert('neayiauth_users', [
+             'neayiauth_user' => $id,
+             'neayiauth_external_userid' => $this->external_id
+        ]);
     }
 
     /**
@@ -207,7 +202,7 @@ class NeayiAuth extends AuthProviderFramework
      */
     private function getMediawikiUserIdForExternalId()
     {
-        if (empty($this->external_id)) 
+        if (empty($this->external_id))
             return false;
 
         $dbr = wfGetDB(DB_REPLICA);
@@ -223,7 +218,7 @@ class NeayiAuth extends AuthProviderFramework
 		);
 		if ( $result ) 
             return (int)$result->neayiauth_user;
-            
+
         return false;
     }
 

@@ -12,5 +12,9 @@ $wgOAuthRedirectUri = 'https://pratiques.dev.tripleperformance.fr/index.php/Spec
 $wgPluggableAuth_EnableAutoLogin = false;
 $wgPluggableAuth_EnableLocalLogin = true;
 $wgPluggableAuth_EnableLocalLogin = false;
+$wgOAuthUri = 'http://dev.core.tripleperformance.com:8008/login?&';
+$wgOAuthUserApiByToken = 'http://neayi_nginx/api/user?&';
 
 * Now run update.php in the maintenance folder (this is to create the table neayiauth)
+
+
