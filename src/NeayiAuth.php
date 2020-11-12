@@ -188,6 +188,9 @@ class NeayiAuth extends AuthProviderFramework
      */
     public function saveExtraAttributes($id)
     {
+        if($this->external_id === null){
+            return;
+        }
         $dbr = wfGetDB(DB_MASTER);
         $dbr->insert('neayiauth_users', [
              'neayiauth_user' => $id,
