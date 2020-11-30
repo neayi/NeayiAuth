@@ -182,7 +182,7 @@ class NeayiAuth extends AuthProviderFramework
         $guid = $this->getSessionVariable("AuthManager::neayiAuthGuid");
 
         // Todo: it would be nice if we could unlog from laravel too.
-
+        // For the moment the only way to logout is to go to https://insights.dev.tripleperformance.fr/user/logout
     }
 
     /**
