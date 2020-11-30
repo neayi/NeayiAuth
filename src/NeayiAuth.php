@@ -22,8 +22,6 @@ use \MediaWiki\Auth\AuthManager;
  */
 class NeayiAuth extends AuthProviderFramework
 {
-    private $external_id = null;
-
     /**
      * NeayiAuth constructor.
      * @internal
@@ -55,10 +53,8 @@ class NeayiAuth extends AuthProviderFramework
 
             $key = $this->getSessionVariable("request_key");
             $this->removeSessionVariable("request_key");
-
-            // Dev note : at this point, we could save $sid in the session (setSessionVariable), so that 
-            //            we can disconnect the userfrom Laravel in deauthenticate()
-
+            $this->removeSessionVariable("AuthManager::neayiAuthGuid");
+            
             if (empty($key)) {
                 $errorMessage = wfMessage('neayiauth-authentication-failure')->plain();
                 return false;                
@@ -92,23 +88,33 @@ class NeayiAuth extends AuthProviderFramework
             }
 
             // make sure the UserName starts with an upercase : https://www.mediawiki.org/wiki/Topic:R97c76vpuokaqby9
-            $user_info['name'] = mb_convert_case($user_info['name'], MB_CASE_TITLE, 'UTF-8');
-            if (!isset($user_info['name']) || !User::isValidUserName($user_info['name'])) {
+            $username = mb_convert_case($user_info['name'], MB_CASE_TITLE, 'UTF-8');
+            
+            // Suffix with the CRC of the GUID, but only up to 235 chars max
+            $crc = ' (' . crc32($user_info['id']) . ')';
+            $maxlength = 235;
+            $username = mb_substr($username, 0, $maxlength - strlen($crc)) . $crc;
+           
+            if (!User::isValidUserName($username)) {
                 $errorMessage = wfMessage('neayiauth-invalid-username')->plain();
                 return false;
             }
 
-            $username = $user_info['name'];
-
             $realname = isset($user_info['realname']) ? $user_info['realname'] : '';
             $email = isset($user_info['email']) ? $user_info['email'] : '';
-            $this->external_id = $user_info['id']; // Required too.
+            $guid = $user_info['id']; // Required too.
+            $userExistsForGuid = false;
 
-            $local_user_id = $this->getMediawikiUserIdForExternalId();
-            $id = $user = null;
+            $id = $this->getMediawikiUserIdForExternalId($guid);
+            if (!empty($id))
+                $userExistsForGuid = true;
+            else // try to find the user from his email
+                $id = $this->getMediawikiUserIdForEmail($email);
+                
+            $user = null;
 
-            if (!empty($local_user_id)) {
-                $user = User::newFromId($local_user_id);
+            if (!empty($id)) {
+                $user = User::newFromId($id);
                 if (!empty($user)) {
                     // NB: there's no need to update the realname or email - this is taken care
                     // by pluggable auth. See that $wgPluggableAuth_EnableLocalProperties is left at the default value (false)
@@ -129,9 +135,11 @@ class NeayiAuth extends AuthProviderFramework
             if (!empty($user)) {
                 $id = $user->getId() === 0 ? null : $user->getId();
             }
+            
+            if (!empty($guid))
+                $this->setSessionVariable( 'AuthManager::neayiAuthGuid', $guid );
 
-            if (!empty($id) && $local_user_id === false) {
-                // Store $this->external_id
+            if (!empty($id) && !$userExistsForGuid) {
                 $this->saveExtraAttributes($id);
             }
 
@@ -171,8 +179,10 @@ class NeayiAuth extends AuthProviderFramework
 
         $this->removeSessionVariable("request_key");
 
-        // Dev note : it would be nice if we could unlog from laravel too, but we're 
-        //            in an API and we lost the laravel session ID. Not a problem. See dev note above.
+        $guid = $this->getSessionVariable("AuthManager::neayiAuthGuid");
+
+        // Todo: it would be nice if we could unlog from laravel too.
+
     }
 
     /**
@@ -188,13 +198,16 @@ class NeayiAuth extends AuthProviderFramework
      */
     public function saveExtraAttributes($id)
     {
-        if($this->external_id === null){
+        $guid = $this->getSessionVariable("AuthManager::neayiAuthGuid");
+
+        if($guid === null){
             return;
         }
+
         $dbr = wfGetDB(DB_MASTER);
         $dbr->insert('neayiauth_users', [
              'neayiauth_user' => $id,
-             'neayiauth_external_userid' => $this->external_id
+             'neayiauth_external_userid' => $guid
         ]);
     }
 
@@ -203,28 +216,54 @@ class NeayiAuth extends AuthProviderFramework
      *
      * @return int the local user id
      */
-    private function getMediawikiUserIdForExternalId()
+    private function getMediawikiUserIdForExternalId($guid)
     {
-        if (empty($this->external_id))
-            return false;
-
-        $dbr = wfGetDB(DB_REPLICA);
-		$result = $dbr->selectRow(
-			'neayiauth_users',
-			[
-				'neayiauth_user'
-			],
-			[
-				'neayiauth_external_userid' => $this->external_id
-			],
-			__METHOD__
-		);
-		if ( $result ) 
-            return (int)$result->neayiauth_user;
+        if (!empty($guid))
+        {
+            $dbr = wfGetDB(DB_REPLICA);
+            $result = $dbr->selectRow(
+                'neayiauth_users',
+                [
+                    'neayiauth_user'
+                ],
+                [
+                    'neayiauth_external_userid' => $guid
+                ],
+                __METHOD__
+            );
+            if ( $result ) 
+                return (int)$result->neayiauth_user;
+        }
 
         return false;
     }
 
+    /**
+     * Returns the mediawiki user id for the given email from laravel.
+     *
+     * @return int the local user id
+     */
+    private function getMediawikiUserIdForEmail($email)
+    {
+        if (!empty($email))
+        {
+            $dbr = wfGetDB(DB_REPLICA);
+            $result = $dbr->selectRow(
+                'user',
+                [
+                    'user_id'
+                ],
+                [
+                    'user_email' => $email
+                ],
+                __METHOD__
+            );
+            if ( $result ) 
+                return (int)$result->user_id;
+        }
+
+        return false;
+    }
 
     /**
      * Inherited from PluggableAuth
