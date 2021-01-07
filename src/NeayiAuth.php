@@ -87,6 +87,11 @@ class NeayiAuth extends AuthProviderFramework
                 return false;
             }
 
+            if (!empty($user_info['error'])) {
+                $errorMessage = wfMessage('neayiauth-authentication-failure')->plain() . ' ' . print_r($user_info, true);
+                return false;
+            }
+
             // make sure the UserName starts with an upercase : https://www.mediawiki.org/wiki/Topic:R97c76vpuokaqby9
             $username = mb_convert_case($user_info['name'], MB_CASE_TITLE, 'UTF-8');
             
