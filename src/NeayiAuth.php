@@ -54,7 +54,8 @@ class NeayiAuth extends AuthProviderFramework
             $key = $this->getSessionVariable("request_key");
             $this->removeSessionVariable("request_key");
             $this->removeSessionVariable("AuthManager::neayiAuthGuid");
-            
+            $this->removeSessionVariable("AuthManager::neayiAuthAPIToken");
+
             if (empty($key)) {
                 $errorMessage = wfMessage('neayiauth-authentication-failure')->plain();
                 return false;                
@@ -108,12 +109,12 @@ class NeayiAuth extends AuthProviderFramework
             $realname = isset($user_info['realname']) ? $user_info['realname'] : '';
             $email = isset($user_info['email']) ? $user_info['email'] : '';
             $guid = $user_info['id']; // Required too.
-            $userExistsForGuid = false;
+
+            if (!isset($user_info['api_token']))
+                $user_info['api_token'] = 'toto';
 
             $id = $this->getMediawikiUserIdForExternalId($guid);
-            if (!empty($id))
-                $userExistsForGuid = true;
-            else // try to find the user from his email
+            if (empty($id))
                 $id = $this->getMediawikiUserIdForEmail($email);
                 
             $user = null;
@@ -144,9 +145,11 @@ class NeayiAuth extends AuthProviderFramework
             if (!empty($guid))
                 $this->setSessionVariable( 'AuthManager::neayiAuthGuid', $guid );
 
-            if (!empty($id) && !$userExistsForGuid) {
+            if (!empty($user_info['api_token']))
+                $this->setSessionVariable( 'AuthManager::neayiAuthAPIToken', $user_info['api_token'] );
+
+            if (!empty($id))
                 $this->saveExtraAttributes($id);
-            }
 
             return true;
         }
@@ -184,7 +187,7 @@ class NeayiAuth extends AuthProviderFramework
 
         $this->removeSessionVariable("request_key");
 
-        $guid = $this->getSessionVariable("AuthManager::neayiAuthGuid");
+        // $guid = $this->getSessionVariable("AuthManager::neayiAuthGuid");
 
         // Todo: it would be nice if we could unlog from laravel too.
         // For the moment the only way to logout is to go to https://insights.dev.tripleperformance.fr/user/logout
@@ -204,16 +207,19 @@ class NeayiAuth extends AuthProviderFramework
     public function saveExtraAttributes($id)
     {
         $guid = $this->getSessionVariable("AuthManager::neayiAuthGuid");
+        $api_token = $this->getSessionVariable("AuthManager::neayiAuthAPIToken");
 
-        if($guid === null){
+        if ($guid === null){
             return;
         }
 
         $dbr = wfGetDB(DB_MASTER);
-        $dbr->insert('neayiauth_users', [
-             'neayiauth_user' => $id,
-             'neayiauth_external_userid' => $guid
-        ]);
+        $dbr->query( "INSERT INTO ".$dbr->tableName('neayiauth_users')." (neayiauth_user, neayiauth_external_userid, neayiauth_external_apitoken) 
+                        VALUES (" .$dbr->addQuotes($id). ", " .$dbr->addQuotes($guid). ", " .$dbr->addQuotes($api_token). ")
+                        ON DUPLICATE KEY UPDATE neayiauth_external_userid = " .$dbr->addQuotes($guid). ",
+                                                neayiauth_external_apitoken = " .$dbr->addQuotes($api_token),
+            __METHOD__
+            );
     }
 
     /**
@@ -315,14 +321,18 @@ class NeayiAuth extends AuthProviderFramework
      */
     public static function onLoadExtensionSchemaUpdates(DatabaseUpdater $updater)
     {
-        $directory = $GLOBALS['wgExtensionDirectory'] . '/NeayiAuth/sql';
         $type = $updater->getDB()->getType();
-        $sql_file = sprintf("%s/%s/table_neayiauth_users.sql", $directory, $type);
+        $dir = $GLOBALS['wgExtensionDirectory'] . DIRECTORY_SEPARATOR .
+			'NeayiAuth' . DIRECTORY_SEPARATOR . 'sql' . DIRECTORY_SEPARATOR . $type . DIRECTORY_SEPARATOR;
+
+        $sql_file = $dir . 'table_neayiauth_users.sql';
 
         if (!file_exists($sql_file)) {
             throw new MWException("NeayiAuth does not support database type `$type`.");
         }
-
+        
         $updater->addExtensionTable('neayiauth_users', $sql_file);
+        $updater->addExtensionField( 'neayiauth_users', 'neayiauth_external_apitoken',
+            $dir  . 'field_neayiauth_external_apitoken.sql' );
     }
 }
