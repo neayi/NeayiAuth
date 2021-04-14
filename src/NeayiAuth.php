@@ -110,9 +110,6 @@ class NeayiAuth extends AuthProviderFramework
             $email = isset($user_info['email']) ? $user_info['email'] : '';
             $guid = $user_info['id']; // Required too.
 
-            if (!isset($user_info['api_token']))
-                $user_info['api_token'] = 'toto';
-
             $id = $this->getMediawikiUserIdForExternalId($guid);
             if (empty($id))
                 $id = $this->getMediawikiUserIdForEmail($email);
@@ -145,8 +142,8 @@ class NeayiAuth extends AuthProviderFramework
             if (!empty($guid))
                 $this->setSessionVariable( 'AuthManager::neayiAuthGuid', $guid );
 
-            if (!empty($user_info['api_token']))
-                $this->setSessionVariable( 'AuthManager::neayiAuthAPIToken', $user_info['api_token'] );
+            if (!empty($user_info['token']))
+                $this->setSessionVariable( 'AuthManager::neayiAuthAPIToken', $user_info['token'] );
 
             if (!empty($id))
                 $this->saveExtraAttributes($id);
