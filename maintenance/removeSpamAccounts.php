@@ -79,7 +79,8 @@ class RemoveUnusedAccounts extends Maintenance {
 						'spambog.ru', 
 						'chinaflights.store', 
 						'familygames.website', 
-						'westrb.com'];
+						'westrb.com', 
+						'mail.ru'];
 
 		
 		foreach ($emails as $email)
@@ -144,6 +145,7 @@ class RemoveUnusedAccounts extends Maintenance {
 			$dbw->delete( 'user_groups', [ 'ug_user' => $delUser ], __METHOD__ );
 			$dbw->delete( 'user_former_groups', [ 'ufg_user' => $delUser ], __METHOD__ );
 			$dbw->delete( 'user_properties', [ 'up_user' => $delUser ], __METHOD__ );
+			$dbw->delete( 'neayiauth_users', [ 'neayiauth_user' => $delUser ], __METHOD__ );
 			$dbw->delete( 'logging', [ 'log_actor' => $delActor ], __METHOD__ );
 			$dbw->delete( 'recentchanges', [ 'rc_actor' => $delActor ], __METHOD__ );
 			$this->output( "done.\n" );
