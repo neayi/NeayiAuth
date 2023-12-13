@@ -23,28 +23,25 @@
   "ExtensionMessagesFiles": {
     "NeayiAuthMagic": "i18n/NeayiAuth.i18n.php"
   },
-  "AutoloadClasses": {
-    "NeayiAuth": "src/NeayiAuth.php",
-    "AuthProviderFramework": "src/AuthProviderFramework.php",
-    "AuthProvider": "src/AuthProvider.php"
-  },
   "AutoloadNamespaces": {
-    "AuthenticationProvider\\": "src/AuthenticationProvider/",
+    "Neayi\\Extension\\NeayiAuth\\": "src/",
     "Exception\\": "src/Exception/"
   },
   "Hooks": {
     "PluggableAuthPopulateGroups": "NeayiAuth::onPluggableAuthPopulateGroups",
     "LoadExtensionSchemaUpdates": "NeayiAuth::onLoadExtensionSchemaUpdates"
   },
+  "attributes": {
+    "PluggableAuth": {
+      "NeayiAuth": {
+        "class": "Neayi\\Extension\\NeayiAuth\\NeayiAuth",
+        "services": [
+          "AuthManager"
+        ]
+      }
+    }
+  },
   "config": {
-    "PluggableAuth_Class": {
-      "value": "NeayiAuth",
-      "descriptionmsg": "neayiauth-pluggable-auth-class-desc"
-    },
-    "PluggableAuth_ButtonLabelMessage": {
-      "value": "neayiauth-pluggable-auth-button-label-message",
-      "descriptionmsg": "neayiauth-pluggable-auth-button-label-message-desc"
-    },
     "OAuthUri": {
       "value": false,
       "descriptionmsg": "neayiauth-uri-desc"

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Copyright 2020 Bertrand Gorge
  *
@@ -14,38 +13,104 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-use \MediaWiki\Auth\AuthManager;
 
+namespace Neayi\Extension\NeayiAuth;
+
+use MediaWiki\Extension\PluggableAuth\PluggableAuth;
+use MediaWiki\User\UserIdentity;
+use MediaWiki\MediaWikiServices;
+use Wikimedia\Rdbms\IConnectionProvider;
+use User;
+use DatabaseUpdater;
+use MWException;
 
 /**
  * Class NeayiAuth
  */
-class NeayiAuth extends AuthProviderFramework
+class NeayiAuth extends PluggableAuth
 {
-    /**
-     * NeayiAuth constructor.
-     * @internal
-     */
+    private $session;
+
+    /** @var IConnectionProvider */
+    private $dbProvider;
+
     public function __construct()
     {
-        parent::__construct();
+        $session_manager = \MediaWiki\Session\SessionManager::singleton();
+        $this->session = $session_manager->getGlobalSession();
+        $this->dbProvider = MediaWikiServices::getInstance()->getDBLoadBalancer();
+    }
+
+    /**
+     * Exposes the set() method from MediaWiki\Session\Session.
+     *
+     * @param $key
+     * @param $value
+     */
+    private function setSessionVariable($key, $value)
+    {
+        $this->session->set($key, $value);
+    }
+
+    /**
+     * Exposes the remove() method from MediaWiki\Session\Session.
+     *
+     * @param $key
+     */
+    private function removeSessionVariable($key)
+    {
+        $this->session->remove($key);
+    }
+
+    /**
+     * Exposes the get() method from MediaWiki\Session\Session.
+     *
+     * @param $key
+     * @return null|string
+     */
+    private function getSessionVariable($key)
+    {
+        return $this->session->get($key);
+    }
+
+    /**
+     * Exposes the exists() method from MediaWiki\Session\Session.
+     *
+     * @param $key
+     * @return bool
+     */
+    private function doesSessionVariableExist($key)
+    {
+        return $this->session->exists($key);
+    }
+
+    /**
+     * Exposes the save() method from MediaWiki\Session\Session.
+     */
+    private function saveSession()
+    {
+        $this->session->save();
     }
 
     /**
      * Inherited from PluggableAuth
      * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
-     * 
-     * @param $id
-     * @param $username
-     * @param $realname
-     * @param $email
-     * @param $errorMessage
-     * @return bool
-     * @throws FatalError
-     * @throws MWException
-     * @internal
-     */
-    public function authenticate(&$id, &$username, &$realname, &$email, &$errorMessage)
+     *
+	 * @param int|null &$id The user's user ID
+	 * @param string|null &$username The user's username
+	 * @param string|null &$realname The user's real name
+	 * @param string|null &$email The user's email address
+	 * @param string|null &$errorMessage Returns a descriptive message if there's an error
+	 * @return bool true if the user has been authenticated and false otherwise
+	 * @since 1.0
+	 *
+	 */
+	public function authenticate(
+		?int &$id,
+		?string &$username,
+		?string &$realname,
+		?string &$email,
+		?string &$errorMessage ): bool
     {
         if ($this->doesSessionVariableExist("request_key")) {
 
@@ -58,7 +123,7 @@ class NeayiAuth extends AuthProviderFramework
 
             if (empty($key)) {
                 $errorMessage = wfMessage('neayiauth-authentication-failure')->plain();
-                return false;                
+                return false;
             }
             $wgOAuthUserApiByToken = $GLOBALS['wgOAuthUserApiByToken'];
             $api_url = $wgOAuthUserApiByToken. http_build_query(['wiki_token' => $key]);
@@ -80,10 +145,8 @@ class NeayiAuth extends AuthProviderFramework
 
             $user_info = json_decode($response, true);
 
-            $hook = Hooks::run('NeayiAuthAfterGetUser', [&$user_info, &$errorMessage]);
-
             // Request failed or user is not authorised.
-            if (empty($user_info) || $hook === false) {
+            if (empty($user_info)) {
                 $errorMessage = !empty($errorMessage) ? $errorMessage : wfMessage('neayiauth-authentication-failure')->plain();
                 return false;
             }
@@ -95,13 +158,14 @@ class NeayiAuth extends AuthProviderFramework
 
             // make sure the UserName starts with an upercase : https://www.mediawiki.org/wiki/Topic:R97c76vpuokaqby9
             $username = mb_convert_case($user_info['name'], MB_CASE_TITLE, 'UTF-8');
-            
+
             // Suffix with the CRC of the GUID, but only up to 235 chars max
             $crc = ' (' . crc32($user_info['id']) . ')';
             $maxlength = 235;
             $username = mb_substr($username, 0, $maxlength - strlen($crc)) . $crc;
-           
-            if (!User::isValidUserName($username)) {
+
+            $userNameUtils = MediaWikiServices::getInstance()->getUserNameUtils();
+            if ( !$userNameUtils->isValid( $username ) ) {
                 $errorMessage = wfMessage('neayiauth-invalid-username')->plain();
                 return false;
             }
@@ -113,18 +177,19 @@ class NeayiAuth extends AuthProviderFramework
             $id = $this->getMediawikiUserIdForExternalId($guid);
             if (empty($id))
                 $id = $this->getMediawikiUserIdForEmail($email);
-                
+
             $user = null;
+            $userFactory = MediaWikiServices::getInstance()->getUserFactory();
 
             if (!empty($id)) {
-                $user = User::newFromId($id);
+                $user = $userFactory->newFromId( $id );
                 if (!empty($user)) {
                     // NB: there's no need to update the realname or email - this is taken care
                     // by pluggable auth. See that $wgPluggableAuth_EnableLocalProperties is left at the default value (false)
-                    
-                    // It is not possible to simply change the UserName. 
+
+                    // It is not possible to simply change the UserName.
                     // See https://www.mediawiki.org/wiki/Extension:Renameuser to understand the
-                    // steps required for changing the username. In the time being we just make sure the 
+                    // steps required for changing the username. In the time being we just make sure the
                     // $username is as stored in DB
                     $username = $user->getName();
                 }
@@ -132,13 +197,13 @@ class NeayiAuth extends AuthProviderFramework
 
             if (empty($user)) {
                 // Create the user or log in using the UserName
-                $user = User::newFromName($username);
+                $user = $userFactory->newFromName( $username );
             }
 
             if (!empty($user)) {
                 $id = $user->getId() === 0 ? null : $user->getId();
             }
-            
+
             if (!empty($guid))
                 $this->setSessionVariable( 'AuthManager::neayiAuthGuid', $guid );
 
@@ -171,17 +236,12 @@ class NeayiAuth extends AuthProviderFramework
     /**
      * Inherited from PluggableAuth
      * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
-     * 
-     * @param User $user
-     * @return void
-     * @throws FatalError
-     * @throws MWException
-     * @internal
-     */
-    public function deauthenticate(User &$user)
+     *
+	 * @param UserIdentity &$user
+	 * @since 1.0
+	 */
+	public function deauthenticate( UserIdentity &$user ): void
     {
-        Hooks::run('NeayiAuthBeforeLogout', [&$user]);
-
         $this->removeSessionVariable("request_key");
 
         // $guid = $this->getSessionVariable("AuthManager::neayiAuthGuid");
@@ -193,15 +253,13 @@ class NeayiAuth extends AuthProviderFramework
     /**
      * Inherited from PluggableAuth
      * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
-     * 
+     *
      * Store the laravel ID in neayiauth_users so that we can match when necessary
-     * 
-     * @param $id
-     * @return void
-     * @throws DBError
-     * @internal
-     */
-    public function saveExtraAttributes($id)
+     *
+     * @param int $id user id
+	 * @since 1.0
+	 */
+	public function saveExtraAttributes( int $id ): void
     {
         $guid = $this->getSessionVariable("AuthManager::neayiAuthGuid");
         $api_token = $this->getSessionVariable("AuthManager::neayiAuthAPIToken");
@@ -210,8 +268,8 @@ class NeayiAuth extends AuthProviderFramework
             return;
         }
 
-        $dbr = wfGetDB(DB_MASTER);
-        $dbr->query( "INSERT INTO ".$dbr->tableName('neayiauth_users')." (neayiauth_user, neayiauth_external_userid, neayiauth_external_apitoken) 
+		$dbr = $this->dbProvider->getConnectionRef( DB_MASTER );
+        $dbr->query( "INSERT INTO ".$dbr->tableName('neayiauth_users')." (neayiauth_user, neayiauth_external_userid, neayiauth_external_apitoken)
                         VALUES (" .$dbr->addQuotes($id). ", " .$dbr->addQuotes($guid). ", " .$dbr->addQuotes($api_token). ")
                         ON DUPLICATE KEY UPDATE neayiauth_external_userid = " .$dbr->addQuotes($guid). ",
                                                 neayiauth_external_apitoken = " .$dbr->addQuotes($api_token),
@@ -228,7 +286,8 @@ class NeayiAuth extends AuthProviderFramework
     {
         if (!empty($guid))
         {
-            $dbr = wfGetDB(DB_REPLICA);
+            $dbr = $this->dbProvider->getConnectionRef( DB_REPLICA );
+
             $result = $dbr->selectRow(
                 'neayiauth_users',
                 [
@@ -239,7 +298,7 @@ class NeayiAuth extends AuthProviderFramework
                 ],
                 __METHOD__
             );
-            if ( $result ) 
+            if ( $result )
                 return (int)$result->neayiauth_user;
         }
 
@@ -255,7 +314,7 @@ class NeayiAuth extends AuthProviderFramework
     {
         if (!empty($email))
         {
-            $dbr = wfGetDB(DB_REPLICA);
+            $dbr = $this->dbProvider->getConnectionRef( DB_REPLICA );
             $result = $dbr->selectRow(
                 'user',
                 [
@@ -266,7 +325,7 @@ class NeayiAuth extends AuthProviderFramework
                 ],
                 __METHOD__
             );
-            if ( $result ) 
+            if ( $result )
                 return (int)$result->user_id;
         }
 
@@ -276,7 +335,7 @@ class NeayiAuth extends AuthProviderFramework
     /**
      * Inherited from PluggableAuth
      * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
-     * 
+     *
      * Adds the user to the groups after authentication.
      *
      * @param User $user
@@ -287,21 +346,17 @@ class NeayiAuth extends AuthProviderFramework
      */
     public static function onPluggableAuthPopulateGroups(User $user)
     {
-        $result = Hooks::run('NeayiAuthBeforeAutoPopulateGroups', [&$user]);
-
-        if ($result === false) {
-            return false;
-        }
-
         if (!isset($GLOBALS['wgOAuthAutoPopulateGroups'])) {
             return false;
         }
 
         // Subtract the groups the user already has from the list of groups to populate.
-        $populate_groups = array_diff((array)$GLOBALS['wgOAuthAutoPopulateGroups'], $user->getEffectiveGroups());
+        $userGroupManager = MediaWikiServices::getInstance()->getUserGroupManager();
+        $groups = $userGroupManager->getUserEffectiveGroups( $user );
+        $populate_groups = array_diff((array)$GLOBALS['wgOAuthAutoPopulateGroups'], $groups);
 
         foreach ($populate_groups as $populate_group) {
-            $user->addGroup($populate_group);
+            $userGroupManager->addUserToGroup( $user, $populate_group );
         }
 
         return true;
@@ -310,7 +365,7 @@ class NeayiAuth extends AuthProviderFramework
     /**
      * Inherited from PluggableAuth
      * @see https://www.mediawiki.org/wiki/Extension:PluggableAuth for description of the call
-     * 
+     *
      * Fired when MediaWiki is updated to allow NeayiAuth to register updates for the database schema.
      *
      * @param DatabaseUpdater $updater
@@ -327,7 +382,7 @@ class NeayiAuth extends AuthProviderFramework
         if (!file_exists($sql_file)) {
             throw new MWException("NeayiAuth does not support database type `$type`.");
         }
-        
+
         $updater->addExtensionTable('neayiauth_users', $sql_file);
         $updater->addExtensionField( 'neayiauth_users', 'neayiauth_external_apitoken',
             $dir  . 'field_neayiauth_external_apitoken.sql' );
