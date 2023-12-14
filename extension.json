@@ -28,8 +28,8 @@
     "Exception\\": "src/Exception/"
   },
   "Hooks": {
-    "PluggableAuthPopulateGroups": "NeayiAuth::onPluggableAuthPopulateGroups",
-    "LoadExtensionSchemaUpdates": "NeayiAuth::onLoadExtensionSchemaUpdates"
+    "PluggableAuthPopulateGroups": "Neayi\\Extension\\NeayiAuth\\NeayiAuth::onPluggableAuthPopulateGroups",
+    "LoadExtensionSchemaUpdates": "Neayi\\Extension\\NeayiAuth\\NeayiAuth::onLoadExtensionSchemaUpdates"
   },
   "attributes": {
     "PluggableAuth": {

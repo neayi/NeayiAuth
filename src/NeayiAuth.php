@@ -383,7 +383,7 @@ class NeayiAuth extends PluggableAuth
             throw new MWException("NeayiAuth does not support database type `$type`.");
         }
 
-        $updater->addExtensionTable('neayiauth_users', $sql_file);
+        $updater->addExtensionTable( 'neayiauth_users', $sql_file);
         $updater->addExtensionField( 'neayiauth_users', 'neayiauth_external_apitoken',
             $dir  . 'field_neayiauth_external_apitoken.sql' );
     }
