@@ -9,7 +9,7 @@ $sitemapXML = '<?xml version="1.0" encoding="UTF-8"?>
 foreach ($sitemaps as $url)
 {
     $url = str_replace('/var/www/html/', 'https://fr.tripleperformance.ag/', $url);
-    $date = date('Y-m-dTH:i:s');
+    $date = date('Y-m-d\TH:i:s');
     $sitemapXML .= '
 	<sitemap>
 		<loc>'.$url.'</loc>
