@@ -38,7 +38,7 @@ class NeayiAuth extends PluggableAuth
     {
         $session_manager = \MediaWiki\Session\SessionManager::singleton();
         $this->session = $session_manager->getGlobalSession();
-        $this->dbProvider = MediaWikiServices::getInstance()->getDBLoadBalancer();
+        $this->dbProvider = MediaWikiServices::getInstance()->getConnectionProvider();
     }
 
     /**
@@ -268,7 +268,7 @@ class NeayiAuth extends PluggableAuth
             return;
         }
 
-		$dbr = $this->dbProvider->getConnectionRef( DB_MASTER );
+		$dbr = $this->dbProvider->getPrimaryDatabase();
         $dbr->query( "INSERT INTO ".$dbr->tableName('neayiauth_users')." (neayiauth_user, neayiauth_external_userid, neayiauth_external_apitoken)
                         VALUES (" .$dbr->addQuotes($id). ", " .$dbr->addQuotes($guid). ", " .$dbr->addQuotes($api_token). ")
                         ON DUPLICATE KEY UPDATE neayiauth_external_userid = " .$dbr->addQuotes($guid). ",
@@ -286,7 +286,7 @@ class NeayiAuth extends PluggableAuth
     {
         if (!empty($guid))
         {
-            $dbr = $this->dbProvider->getConnectionRef( DB_REPLICA );
+            $dbr = $this->dbProvider->getReplicaDatabase();
 
             $result = $dbr->selectRow(
                 'neayiauth_users',
@@ -314,7 +314,7 @@ class NeayiAuth extends PluggableAuth
     {
         if (!empty($email))
         {
-            $dbr = $this->dbProvider->getConnectionRef( DB_REPLICA );
+            $dbr = $this->dbProvider->getReplicaDatabase();
             $result = $dbr->selectRow(
                 'user',
                 [
