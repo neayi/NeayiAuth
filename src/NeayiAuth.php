@@ -22,7 +22,8 @@ use MediaWiki\MediaWikiServices;
 use Wikimedia\Rdbms\IConnectionProvider;
 use MediaWiki\User\User;
 use MediaWiki\Installer\DatabaseUpdater;
-use MWException;
+use RuntimeException;
+use FatalError;
 
 /**
  * Class NeayiAuth
@@ -146,13 +147,19 @@ class NeayiAuth extends PluggableAuth
             $user_info = json_decode($response, true);
 
             // Request failed or user is not authorised.
-            if (empty($user_info)) {
+            if (empty($user_info) || !is_array($user_info)) {
                 $errorMessage = !empty($errorMessage) ? $errorMessage : wfMessage('neayiauth-authentication-failure')->plain();
                 return false;
             }
 
             if (!empty($user_info['error'])) {
                 $errorMessage = wfMessage('neayiauth-authentication-failure')->plain() . ' ' . print_r($user_info, true);
+                return false;
+            }
+
+            // Validate required fields
+            if (empty($user_info['name']) || empty($user_info['id'])) {
+                $errorMessage = wfMessage('neayiauth-authentication-failure')->plain() . ' Missing required user data.';
                 return false;
             }
 
@@ -220,7 +227,7 @@ class NeayiAuth extends PluggableAuth
         // Step 1 - Start the login process
 
         // Redirect to laravel with some token that we keep safe in our session:
-        $token = uniqid();
+        $token = substr(bin2hex(random_bytes(32)), 0, 13);
         $this->setSessionVariable('request_key', $token);
         $this->saveSession();
 
@@ -268,19 +275,28 @@ class NeayiAuth extends PluggableAuth
             return;
         }
 
-		$dbr = $this->dbProvider->getPrimaryDatabase();
-        $dbr->query( "INSERT INTO ".$dbr->tableName('neayiauth_users')." (neayiauth_user, neayiauth_external_userid, neayiauth_external_apitoken)
-                        VALUES (" .$dbr->addQuotes($id). ", " .$dbr->addQuotes($guid). ", " .$dbr->addQuotes($api_token). ")
-                        ON DUPLICATE KEY UPDATE neayiauth_external_userid = " .$dbr->addQuotes($guid). ",
-                                                neayiauth_external_apitoken = " .$dbr->addQuotes($api_token),
+		$dbw = $this->dbProvider->getPrimaryDatabase();
+        $dbw->upsert(
+            'neayiauth_users',
+            [
+                'neayiauth_user' => $id,
+                'neayiauth_external_userid' => $guid,
+                'neayiauth_external_apitoken' => $api_token
+            ],
+            [ 'neayiauth_user' ],
+            [
+                'neayiauth_external_userid' => $guid,
+                'neayiauth_external_apitoken' => $api_token
+            ],
             __METHOD__
-            );
+        );
     }
 
     /**
      * Returns the mediawiki user id for the given external ID from laravel.
      *
-     * @return int the local user id
+     * @param string $guid The external user ID
+     * @return int|false The local user id or false if not found
      */
     private function getMediawikiUserIdForExternalId($guid)
     {
@@ -308,7 +324,8 @@ class NeayiAuth extends PluggableAuth
     /**
      * Returns the mediawiki user id for the given email from laravel.
      *
-     * @return int the local user id
+     * @param string $email The user's email address
+     * @return int|false The local user id or false if not found
      */
     private function getMediawikiUserIdForEmail($email)
     {
@@ -341,7 +358,6 @@ class NeayiAuth extends PluggableAuth
      * @param User $user
      * @return bool
      * @throws FatalError
-     * @throws MWException
      * @internal
      */
     public static function onPluggableAuthPopulateGroups(User $user)
@@ -369,6 +385,7 @@ class NeayiAuth extends PluggableAuth
      * Fired when MediaWiki is updated to allow NeayiAuth to register updates for the database schema.
      *
      * @param DatabaseUpdater $updater
+     * @throws RuntimeException If the database type is not supported
      * @internal
      */
     public static function onLoadExtensionSchemaUpdates(DatabaseUpdater $updater)
@@ -380,7 +397,7 @@ class NeayiAuth extends PluggableAuth
         $sql_file = $dir . 'table_neayiauth_users.sql';
 
         if (!file_exists($sql_file)) {
-            throw new MWException("NeayiAuth does not support database type `$type`.");
+            throw new RuntimeException("NeayiAuth does not support database type `$type`.");
         }
 
         $updater->addExtensionTable( 'neayiauth_users', $sql_file);
