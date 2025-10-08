@@ -20,8 +20,8 @@ use MediaWiki\Extension\PluggableAuth\PluggableAuth;
 use MediaWiki\User\UserIdentity;
 use MediaWiki\MediaWikiServices;
 use Wikimedia\Rdbms\IConnectionProvider;
-use User;
-use DatabaseUpdater;
+use MediaWiki\User\User;
+use MediaWiki\Installer\DatabaseUpdater;
 use MWException;
 
 /**
