@@ -326,6 +326,7 @@ class GenerateSitemap extends Maintenance {
 			->from( 'page' )
 			->leftJoin( 'page_props', null, [ 'page_id = pp_page', 'pp_propname' => 'noindex' ] )
 			->where( [ 'page_namespace' => $namespace ] )
+			->where( [ 'page_content_model' => 'wikitext' ] )
 			;
 
 		$res = $query->caller( __METHOD__ )->fetchResultSet();
