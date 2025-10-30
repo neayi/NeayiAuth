@@ -321,16 +321,13 @@ class GenerateSitemap extends Maintenance {
 	 * @return IResultWrapper
 	 */
 	private function getPageRes( $namespace ) {
-		$query = $this->dbr->newSelectQueryBuilder()
+		return $this->dbr->newSelectQueryBuilder()
 			->select( [ 'page_namespace', 'page_title', 'page_touched', 'page_is_redirect', 'pp_propname' ] )
 			->from( 'page' )
 			->leftJoin( 'page_props', null, [ 'page_id = pp_page', 'pp_propname' => 'noindex' ] )
 			->where( [ 'page_namespace' => $namespace ] )
 			->where( [ 'page_content_model' => 'wikitext' ] )
-			;
-
-		$res = $query->caller( __METHOD__ )->fetchResultSet();
-		return $res;
+			->caller( __METHOD__ )->fetchResultSet();		
 	}
 
 	/**
